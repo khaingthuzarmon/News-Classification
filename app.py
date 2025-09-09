@@ -161,8 +161,11 @@ if st.button('Classify Article'):
             </div>
             """, unsafe_allow_html=True)
             
-            # Show confidence score
-            st.info(f"🎯 **Confidence:** {confidence:.1f}%")
+            # Show confidence score only if available
+            if show_confidence:
+                st.info(f"🎯 **Confidence:** {confidence:.1f}%")
+            else:
+                st.info("🎯 **Model:** SVM Linear Classifier")
         else:
             st.warning("Please enter some text to classify.")
     else:
