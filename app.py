@@ -21,32 +21,14 @@ import streamlit as st
 import nltk
 import ssl
 
-# This is a more robust NLTK download setup
-@st.cache_resource
-def setup_nltk():
-    """Downloads NLTK data and handles potential SSL errors."""
-    try:
-        # Create an unverified SSL context to bypass certificate issues
-        _create_unverified_https_context = ssl._create_unverified_context
-    except AttributeError:
-        # This is for older Python versions where the attribute doesn't exist.
-        pass
-    else:
-        # Apply the unverified context
-        ssl._create_default_https_context = _create_unverified_https_context
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
 
-    # Now, try to download the necessary NLTK data
-    packages = ['punkt', 'stopwords']
-    for package in packages:
-        try:
-            nltk.data.find(f'tokenizers/{package}' if package == 'punkt' else f'corpora/{package}')
-        except nltk.downloader.DownloadError:
-            st.toast(f'Downloading NLTK package: {package}...', icon='⏳')
-            nltk.download(package)
-            st.toast(f'Downloaded {package}!', icon='✅')
-
-# Run the setup function at the absolute start of the app
-setup_nltk()
+nltk.download('punkt')
 
 # --- Add this code ---
 # Function to download NLTK data if not already present
