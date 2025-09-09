@@ -17,6 +17,33 @@ from nltk.tokenize import word_tokenize
 # --- NLTK Stopwords Download ---
 # This is done once and then cached.
 @st.cache_data
+import streamlit as st
+import nltk
+
+# --- Add this code ---
+# Function to download NLTK data if not already present
+@st.cache_resource
+def download_nltk_data():
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except nltk.downloader.DownloadError:
+        nltk.download('punkt')
+    try:
+        nltk.data.find('corpora/stopwords')
+    except nltk.downloader.DownloadError:
+        nltk.download('stopwords')
+
+# Download data right at the start
+download_nltk_data()
+# --- End of new code ---
+
+
+# --- Your existing app code follows ---
+st.title("BBC News Article Classifier")
+
+# ... rest of your code ...
+def preprocess_text(text):
+    # ... your function logic ...
 def download_nltk_data():
     nltk.download('punkt')
     nltk.download('stopwords')
