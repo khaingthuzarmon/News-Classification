@@ -11,16 +11,9 @@ import streamlit as st
 import joblib
 import re
 import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-
-# --- NLTK Stopwords Download ---
-# This is done once and then cached.
-@st.cache_data
-import streamlit as st
-import nltk
 import ssl
 
+# Fix SSL certificate issues for NLTK downloads
 try:
     _create_unverified_https_context = ssl._create_unverified_context
 except AttributeError:
@@ -28,22 +21,32 @@ except AttributeError:
 else:
     ssl._create_default_https_context = _create_unverified_https_context
 
-nltk.download('punkt')
-
-# --- Add this code ---
-# Function to download NLTK data if not already present
-@st.cache_resource
-
+# --- NLTK Data Download ---
+@st.cache_data
 def download_nltk_data():
-    nltk.download('punkt')
-    nltk.download('stopwords')
-    return set(stopwords.words('english'))
+    """Download required NLTK data and return stopwords set."""
+    try:
+        # Download required NLTK data
+        nltk.download('punkt', quiet=True)
+        nltk.download('punkt_tab', quiet=True)  # For newer NLTK versions
+        nltk.download('stopwords', quiet=True)
+        
+        # Import after download
+        from nltk.corpus import stopwords
+        return set(stopwords.words('english'))
+    except Exception as e:
+        st.error(f"Error downloading NLTK data: {e}")
+        # Return a basic set of common English stopwords as fallback
+        return {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 
+                'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 
+                'him', 'her', 'us', 'them', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'am', 
+                'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 
+                'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall'}
 
+# Download NLTK data and get stopwords
 stop_words = download_nltk_data()
 
-
 # --- Load Model and Vectorizer ---
-# Use st.cache_resource to load these only once and speed up the app.
 @st.cache_resource
 def load_model_and_vectorizer():
     """Loads the saved SVM model and TF-IDF vectorizer."""
@@ -57,9 +60,7 @@ def load_model_and_vectorizer():
 
 model, tfidf_vectorizer = load_model_and_vectorizer()
 
-
 # --- Text Preprocessing Function ---
-# This function must be identical to the one used for training.
 def preprocess_text(text):
     """Cleans and preprocesses the input text."""
     # 1. Convert to lowercase
@@ -67,20 +68,22 @@ def preprocess_text(text):
     # 2. Remove punctuation and extra spaces
     text = re.sub(r'[^\w\s]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
-    # 3. Tokenization
-    tokens = word_tokenize(text)
+    
+    # 3. Tokenization with fallback
+    try:
+        from nltk.tokenize import word_tokenize
+        tokens = word_tokenize(text)
+    except Exception as e:
+        # Fallback to simple split if NLTK tokenization fails
+        st.warning("Using simple tokenization due to NLTK issue")
+        tokens = text.split()
+    
     # 4. Remove stopwords
     tokens = [token for token in tokens if token not in stop_words]
     # 5. Join tokens back to string
     return ' '.join(tokens)
 
-
 # --- Custom CSS for Styling ---
-def local_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
-# You can create a style.css file or embed the style directly
 st.markdown("""
 <style>
 /* Main page background */
@@ -118,7 +121,6 @@ h1 {
 </style>
 """, unsafe_allow_html=True)
 
-
 # --- Streamlit App Interface ---
 st.title('📰 BBC News Article Classifier')
 
@@ -126,6 +128,24 @@ st.markdown("""
 Enter the text of a news article below, and the model will predict its category:
 **Business, Entertainment, Politics, Sport, or Tech.**
 """)
+import subprocess
+import sys
+
+def install_nltk_data():
+    try:
+        import nltk
+        nltk.download('punkt')
+        nltk.download('punkt_tab')
+        nltk.download('stopwords')
+    except:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "nltk"])
+        import nltk
+        nltk.download('punkt')
+        nltk.download('punkt_tab')
+        nltk.download('stopwords')
+
+install_nltk_data()
+
 
 # User input text area
 user_input = st.text_area("Enter article text here:", height=250)
@@ -158,3 +178,5 @@ if st.button('Classify Article'):
             st.success(f"**Predicted Category:** {predicted_category}")
         else:
             st.warning("Please enter some text to classify.")
+    else:
+        st.error("Model or vectorizer could not be loaded. Please check your files.")
