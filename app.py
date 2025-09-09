@@ -59,7 +59,7 @@ def preprocess_text(text):
     text = re.sub(r'[^\w\s]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
     
-    # 3. Tokenization with fallback
+    # 3. Tokenization with better fallback
     try:
         from nltk.tokenize import word_tokenize
         tokens = word_tokenize(text)
@@ -68,8 +68,14 @@ def preprocess_text(text):
         st.warning("Using simple tokenization due to NLTK issue")
         tokens = text.split()
     
-    # 4. Remove stopwords
-    tokens = [token for token in tokens if token not in stop_words]
+    # 4. Remove stopwords (handle case where stop_words might be None)
+    if stop_words:
+        tokens = [token for token in tokens if token not in stop_words]
+    else:
+        # Basic stopword removal if stop_words failed to load
+        basic_stopwords = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
+        tokens = [token for token in tokens if token not in basic_stopwords]
+    
     # 5. Join tokens back to string
     return ' '.join(tokens)
 
@@ -134,20 +140,29 @@ if st.button('Classify Article'):
 
             # 3. Make a prediction
             prediction = model.predict(vectorized_input)
+            prediction_proba = model.predict_proba(vectorized_input)
+            confidence = max(prediction_proba[0]) * 100
 
-            # 4. Map prediction to category name
-            # This mapping must match the LabelEncoder from your notebook
+            # 4. Map prediction to category name with icons and colors
             category_mapping = {
-                0: 'Business',
-                1: 'Entertainment',
-                2: 'Politics',
-                3: 'Sport',
-                4: 'Tech'
+                0: ('Business', '💼', '#1f77b4'),
+                1: ('Entertainment', '🎬', '#ff7f0e'), 
+                2: ('Politics', '🏛️', '#2ca02c'),
+                3: ('Sport', '⚽', '#d62728'),
+                4: ('Tech', '💻', '#9467bd')
             }
-            predicted_category = category_mapping.get(prediction[0], 'Unknown')
+            
+            predicted_category, icon, color = category_mapping.get(prediction[0], ('Unknown', '❓', '#gray'))
 
-            # 5. Display the result
-            st.success(f"**Predicted Category:** {predicted_category}")
+            # 5. Display the result with enhanced styling
+            st.markdown(f"""
+            <div style="background-color: {color}20; border-left: 5px solid {color}; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                <h3 style="color: {color}; margin: 0;">{icon} Predicted Category: {predicted_category}</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Show confidence score
+            st.info(f"🎯 **Confidence:** {confidence:.1f}%")
         else:
             st.warning("Please enter some text to classify.")
     else:
