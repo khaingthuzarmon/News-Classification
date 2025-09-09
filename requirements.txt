@@ -2,6 +2,6 @@ scikit-learn
 joblib
 numpy
 pandas
-nltk
+nltk==3.8.1
 spacy
 streamlit
